@@ -2,8 +2,7 @@
 
 > **Using historical sensor and operational telemetry to predict failures before costly downtime occurs.**
 
-![Predictive Analytics Overview](assets/tata-predictive-charts.png)
-
+![Predictive Analytics Overview]
 ---
 
 ### 🎯 The Business Problem
