@@ -2,6 +2,9 @@
 
 > **Using historical sensor and operational telemetry to predict failures before costly downtime occurs.**
 
+### 🚀 Explore the Interactive Project
+[Open the predictive failure and anomaly detection project](index.html)
+
 ![Predictive Analytics Overview]
 ---
 
