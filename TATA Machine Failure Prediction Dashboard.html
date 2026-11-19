@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TATA Machine Failure Prediction | Telemetry & Failure Risk BI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #0b0f17;
+      --bg-card: #131926;
+      --bg-card-hover: #182030;
+      --border: #1f293d;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #f59e0b;
+      --accent-soft: rgba(245, 158, 11, 0.14);
+      --blue: #38bdf8;
+      --green: #34d399;
+      --danger: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+      background-image: radial-gradient(circle at 85% 0%, rgba(245, 158, 11, 0.08), transparent 40%),
+                        radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.06), transparent 38%);
+    }
+
+    .container {
+      max-width: 1340px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .brand h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .brand p {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-top: 4px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    select, button {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    }
+
+    select:hover, select:focus, button:hover {
+      border-color: var(--accent);
+      background: var(--bg-card-hover);
+    }
+
+    button.reset-btn {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      transition: border-color 0.2s;
+    }
+
+    .kpi-card:hover {
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    .kpi-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .kpi-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 8px 0 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-delta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .pos { color: var(--green); }
+    .warn { color: var(--accent); }
+    .neg { color: var(--danger); }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1.55fr 1.45fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1.9fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 960px) {
+      .charts-grid, .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+      body {
+        padding: 16px;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .panel-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 275px;
+      width: 100%;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+    }
+
+    th {
+      text-align: left;
+      color: var(--text-muted);
+      font-weight: 500;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 11px 8px;
+      border-bottom: 1px solid rgba(31, 41, 61, 0.6);
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status-pill {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.74rem;
+      font-weight: 600;
+    }
+
+    .pill-good { background: rgba(52, 211, 153, 0.14); color: var(--green); }
+    .pill-warn { background: rgba(245, 158, 11, 0.14); color: var(--accent); }
+    .pill-bad  { background: rgba(248, 113, 113, 0.14); color: var(--danger); }
+
+    footer {
+      margin-top: 28px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Top Header & Interactive Telemetry Filters -->
+    <header>
+      <div class="brand">
+        <h1>TATA Machine Failure Prediction <span class="badge">90,954 Telemetry Rows</span></h1>
+        <p>Industrial Equipment Failure Modes (TWF, HDF, PWF, OSF, RNF), Tool Wear &amp; Operating Stress EDA</p>
+      </div>
+      <div class="filters">
+        <select id="typeFilter" aria-label="Filter by Product Type">
+          <option value="ALL">All Product Types (L, M, H)</option>
+          <option value="L">Type L — Low Variant (63,438)</option>
+          <option value="M">Type M — Medium Variant (21,535)</option>
+          <option value="H">Type H — High Variant (5,981)</option>
+        </select>
+        <select id="wearFilter" aria-label="Filter by Tool Wear Bucket">
+          <option value="ALL">All Tool Wear Ranges (0–253 min)</option>
+          <option value="0-60m">0-60m (Early Life)</option>
+          <option value="61-120m">61-120m (Mid Life)</option>
+          <option value="121-180m">121-180m (Elevated Wear)</option>
+          <option value="181m+">181m+ (Late / Critical Wear)</option>
+        </select>
+        <select id="rpmFilter" aria-label="Filter by Rotational Speed Bucket">
+          <option value="ALL">All Rotational Speeds (RPM)</option>
+          <option value="Low (<1450)">Low (&lt;1450 RPM)</option>
+          <option value="Normal (1450-1650)">Normal (1450-1650 RPM)</option>
+          <option value="High (>1650)">High (&gt;1650 RPM)</option>
+        </select>
+        <button type="button" class="reset-btn" id="resetBtn">Reset Filters</button>
+      </div>
+    </header>
+
+    <!-- Dynamic KPI Summary Cards -->
+    <section class="kpi-grid" aria-label="Key Telemetry Metrics">
+      <div class="kpi-card">
+        <div class="kpi-label">Telemetry Records</div>
+        <div class="kpi-value" id="kpiRows">90,954</div>
+        <div class="kpi-delta" id="kpiRowsSub">0 missing values in df_cleaned.csv</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Failure Events</div>
+        <div class="kpi-value" id="kpiFailCount">1,310</div>
+        <div class="kpi-delta neg" id="kpiFailRate">Failure rate: 1.44%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg. Rotational Speed</div>
+        <div class="kpi-value" id="kpiRpm">1,521 RPM</div>
+        <div class="kpi-delta" id="kpiTorque">Avg torque: 40.3 Nm</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg. Tool Wear</div>
+        <div class="kpi-value" id="kpiWear">104.3 min</div>
+        <div class="kpi-delta">Range: 0 to 253 minutes</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg. Process Temp</div>
+        <div class="kpi-value" id="kpiProcTemp">309.9 K</div>
+        <div class="kpi-delta" id="kpiAirTemp">Avg air temp: 299.9 K</div>
+      </div>
+    </section>
+
+    <!-- Primary Visualizations Row -->
+    <section class="charts-grid" aria-label="Failure Mode and Tool Wear Risk Charts">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Failure Occurrences by Mode (HDF, OSF, PWF, RNF, TWF)</span>
+          <span class="panel-sub" id="modeSub">All Product Types</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="failureModeChart"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Failure Rate by Tool Wear Stage (%)</span>
+          <span class="panel-sub">Share of telemetry rows with failure flag = 1</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="wearRiskChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Secondary Row: Product Type Share & Regime Risk Table -->
+    <section class="bottom-grid" aria-label="Product Type Share and Operating Regime Table">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Product Type Volume Share</span>
+          <span class="panel-sub">L (63,438) vs. M (21,535) vs. H (5,981)</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="typeShareChart"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Operating Regime &amp; Failure Risk Breakdown</span>
+          <span class="panel-sub">Ranked by failure rate across active filter</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Regime (Type • Wear)</th>
+                <th>Records</th>
+                <th>Failures</th>
+                <th>Failure %</th>
+                <th>Avg RPM</th>
+                <th>Avg Torque</th>
+                <th>Risk Tier</th>
+              </tr>
+            </thead>
+            <tbody id="regimeTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer with GitHub & LinkedIn Links -->
+    <footer>
+      <div>Built by <strong>Runal Bhosale</strong> &bull; TATA Machine Failure Prediction (Python &bull; pandas &bull; seaborn &bull; Chart.js)</div>
+      <div>
+        <a href="https://github.com/Runal21/TATA-Classification-Machine-Failure-Prediction" target="_blank" rel="noopener noreferrer">GitHub Repository</a> &bull;
+        <a href="https://www.linkedin.com/in/runal-bhosale" target="_blank" rel="noopener noreferrer">LinkedIn</a> &bull;
+        <a href="mailto:rubhosale21@gmail.com">rubhosale21@gmail.com</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    /**
+     * Exact 36 aggregated telemetry buckets across all 90,954 rows of df_cleaned.csv.
+     * t: Product Type (L, M, H)
+     * w: Tool Wear Bucket (0-60m, 61-120m, 121-180m, 181m+)
+     * s: Rotational Speed Bucket (Low (<1450), Normal (1450-1650), High (>1650))
+     * n: Row count | a: Sum Air temp [K] | p: Sum Process temp [K] | r: Sum RPM | q: Sum Torque [Nm] | wr: Sum Tool wear [min]
+     * twf, hdf, pwf, osf, rnf: Failure mode counts | af: Any failure count
+     */
+    const TATA_DATA = [
+      {"t":"H","w":"0-60m","s":"Low (<1450)","n":624,"a":187073.3,"p":193419.5,"r":874488.0,"q":29291.0,"wr":17339,"twf":2,"hdf":10,"pwf":2,"osf":0,"rnf":1,"af":15},
+      {"t":"H","w":"0-60m","s":"Normal (1450-1650)","n":908,"a":272263.3,"p":281441.1,"r":1392051.0,"q":35490.0,"wr":24487,"twf":0,"hdf":0,"pwf":0,"osf":0,"rnf":1,"af":1},
+      {"t":"H","w":"0-60m","s":"High (>1650)","n":257,"a":77064.0,"p":79653.5,"r":456277.0,"q":7266.5,"wr":6825,"twf":0,"hdf":0,"pwf":0,"osf":0,"rnf":1,"af":1},
+      {"t":"H","w":"61-120m","s":"Low (<1450)","n":539,"a":161543.3,"p":167020.6,"r":756202.0,"q":25293.1,"wr":49425,"twf":0,"hdf":7,"pwf":1,"osf":1,"rnf":3,"af":11},
+      {"t":"H","w":"61-120m","s":"Normal (1450-1650)","n":789,"a":236481.9,"p":244483.1,"r":1209140.0,"q":30887.3,"wr":72067,"twf":0,"hdf":0,"pwf":0,"osf":0,"rnf":2,"af":2},
+      {"t":"H","w":"61-120m","s":"High (>1650)","n":241,"a":72264.1,"p":74719.5,"r":425633.0,"q":6866.8,"wr":22209,"twf":1,"hdf":0,"pwf":0,"osf":0,"rnf":4,"af":5},
+      {"t":"H","w":"121-180m","s":"Low (<1450)","n":588,"a":176401.8,"p":182317.8,"r":822470.0,"q":27687.3,"wr":87599,"twf":0,"hdf":4,"pwf":0,"osf":0,"rnf":0,"af":4},
+      {"t":"H","w":"121-180m","s":"Normal (1450-1650)","n":936,"a":280866.6,"p":290269.6,"r":1432799.0,"q":36503.4,"wr":140837,"twf":0,"hdf":0,"pwf":3,"osf":0,"rnf":4,"af":7},
+      {"t":"H","w":"121-180m","s":"High (>1650)","n":281,"a":84224.8,"p":87072.5,"r":501098.0,"q":7934.0,"wr":42156,"twf":0,"hdf":0,"pwf":1,"osf":0,"rnf":1,"af":2},
+      {"t":"H","w":"181m+","s":"Low (<1450)","n":264,"a":79156.1,"p":81817.8,"r":367971.0,"q":12577.7,"wr":52353,"twf":3,"hdf":6,"pwf":1,"osf":4,"rnf":0,"af":13},
+      {"t":"H","w":"181m+","s":"Normal (1450-1650)","n":423,"a":126808.8,"p":131075.0,"r":646716.0,"q":16440.9,"wr":83625,"twf":2,"hdf":0,"pwf":0,"osf":2,"rnf":0,"af":4},
+      {"t":"H","w":"181m+","s":"High (>1650)","n":131,"a":39287.2,"p":40601.1,"r":234325.0,"q":3532.7,"wr":25844,"twf":0,"hdf":0,"pwf":0,"osf":0,"rnf":1,"af":1},
+      {"t":"L","w":"0-60m","s":"Low (<1450)","n":6440,"a":1931068.4,"p":1996148.15,"r":9006034.0,"q":304990.4,"wr":168945,"twf":13,"hdf":116,"pwf":26,"osf":30,"rnf":20,"af":197},
+      {"t":"L","w":"0-60m","s":"Normal (1450-1650)","n":10365,"a":3107822.6,"p":3212794.8,"r":15868473.0,"q":404607.4,"wr":272533,"twf":2,"hdf":1,"pwf":4,"osf":1,"rnf":21,"af":29},
+      {"t":"L","w":"0-60m","s":"High (>1650)","n":2595,"a":778308.9,"p":804460.0,"r":4608483.0,"q":73278.0,"wr":68631,"twf":1,"hdf":2,"pwf":14,"osf":1,"rnf":6,"af":21},
+      {"t":"L","w":"61-120m","s":"Low (<1450)","n":5502,"a":1649583.7,"p":1705066.2,"r":7685472.0,"q":260893.7,"wr":504153,"twf":2,"hdf":78,"pwf":23,"osf":23,"rnf":13,"af":134},
+      {"t":"L","w":"61-120m","s":"Normal (1450-1650)","n":8772,"a":2629523.4,"p":2718230.7,"r":13430552.0,"q":342761.1,"wr":801975,"twf":1,"hdf":1,"pwf":6,"osf":3,"rnf":17,"af":27},
+      {"t":"L","w":"61-120m","s":"High (>1650)","n":2105,"a":631299.6,"p":652427.7,"r":3742143.0,"q":59804.5,"wr":194094,"twf":0,"hdf":0,"pwf":12,"osf":1,"rnf":5,"af":18},
+      {"t":"L","w":"121-180m","s":"Low (<1450)","n":5893,"a":1766583.6,"p":1826078.58,"r":8235256.0,"q":279953.0,"wr":885316,"twf":3,"hdf":68,"pwf":26,"osf":39,"rnf":25,"af":149},
+      {"t":"L","w":"121-180m","s":"Normal (1450-1650)","n":9990,"a":2994561.3,"p":3095774.2,"r":15299740.0,"q":389294.8,"wr":1501970,"twf":1,"hdf":3,"pwf":6,"osf":4,"rnf":19,"af":31},
+      {"t":"L","w":"121-180m","s":"High (>1650)","n":2520,"a":755684.6,"p":781048.5,"r":4488379.0,"q":71294.8,"wr":380139,"twf":2,"hdf":0,"pwf":11,"osf":0,"rnf":2,"af":15},
+      {"t":"L","w":"181m+","s":"Low (<1450)","n":3052,"a":915803.1,"p":946331.0,"r":4260260.0,"q":145933.9,"wr":606586,"twf":30,"hdf":73,"pwf":25,"osf":194,"rnf":6,"af":291},
+      {"t":"L","w":"181m+","s":"Normal (1450-1650)","n":4970,"a":1491346.4,"p":1541158.5,"r":7611662.0,"q":193420.6,"wr":986098,"twf":29,"hdf":0,"pwf":0,"osf":19,"rnf":9,"af":55},
+      {"t":"L","w":"181m+","s":"High (>1650)","n":1234,"a":370373.4,"p":382662.3,"r":2201272.0,"q":35126.3,"wr":244735,"twf":10,"hdf":1,"pwf":6,"osf":2,"rnf":6,"af":25},
+      {"t":"M","w":"0-60m","s":"Low (<1450)","n":2157,"a":646771.8,"p":668454.6,"r":3006466.0,"q":101959.6,"wr":56992,"twf":2,"hdf":32,"pwf":13,"osf":3,"rnf":7,"af":57},
+      {"t":"M","w":"0-60m","s":"Normal (1450-1650)","n":3286,"a":985382.2,"p":1018334.5,"r":5032323.0,"q":128215.9,"wr":84221,"twf":0,"hdf":0,"pwf":2,"osf":0,"rnf":8,"af":10},
+      {"t":"M","w":"0-60m","s":"High (>1650)","n":926,"a":277641.4,"p":286948.6,"r":1647561.0,"q":26268.3,"wr":24774,"twf":0,"hdf":0,"pwf":3,"osf":0,"rnf":2,"af":5},
+      {"t":"M","w":"61-120m","s":"Low (<1450)","n":2153,"a":645692.6,"p":667182.1,"r":3004278.0,"q":101608.6,"wr":196087,"twf":2,"hdf":35,"pwf":10,"osf":0,"rnf":0,"af":45},
+      {"t":"M","w":"61-120m","s":"Normal (1450-1650)","n":3033,"a":909565.8,"p":939969.4,"r":4647867.0,"q":118268.6,"wr":276931,"twf":0,"hdf":0,"pwf":2,"osf":0,"rnf":12,"af":14},
+      {"t":"M","w":"61-120m","s":"High (>1650)","n":800,"a":239999.1,"p":247997.8,"r":1422496.0,"q":22628.0,"wr":72872,"twf":0,"hdf":1,"pwf":1,"osf":1,"rnf":1,"af":4},
+      {"t":"M","w":"121-180m","s":"Low (<1450)","n":1961,"a":587871.5,"p":607655.6,"r":2732699.0,"q":93724.4,"wr":296663,"twf":2,"hdf":29,"pwf":2,"osf":3,"rnf":4,"af":38},
+      {"t":"M","w":"121-180m","s":"Normal (1450-1650)","n":3153,"a":945408.2,"p":977110.4,"r":4834351.0,"q":122576.9,"wr":475000,"twf":0,"hdf":0,"pwf":2,"osf":2,"rnf":2,"af":4},
+      {"t":"M","w":"121-180m","s":"High (>1650)","n":859,"a":257589.4,"p":266251.0,"r":1524813.0,"q":24094.5,"wr":131514,"twf":1,"hdf":0,"pwf":5,"osf":0,"rnf":1,"af":7},
+      {"t":"M","w":"181m+","s":"Low (<1450)","n":1057,"a":317115.9,"p":327712.2,"r":1472506.0,"q":50118.3,"wr":208409,"twf":11,"hdf":19,"pwf":5,"osf":17,"rnf":1,"af":49},
+      {"t":"M","w":"181m+","s":"Normal (1450-1650)","n":1678,"a":503437.8,"p":520241.6,"r":2576152.0,"q":64755.6,"wr":329317,"twf":12,"hdf":0,"pwf":2,"osf":2,"rnf":4,"af":16},
+      {"t":"M","w":"181m+","s":"High (>1650)","n":472,"a":141550.4,"p":146296.4,"r":839712.0,"q":13299.1,"wr":93232,"twf":2,"hdf":0,"pwf":0,"osf":0,"rnf":1,"af":3}
+    ];
+
+    const WEAR_BINS = ["0-60m", "61-120m", "121-180m", "181m+"];
+    const TYPES = ["L", "M", "H"];
+
+    // Configure global Chart.js defaults for dark theme legibility
+    Chart.defaults.color = "#94a3b8";
+    Chart.defaults.borderColor = "rgba(31, 41, 61, 0.75)";
+
+    // 1. Failure Mode Bar Chart (HDF, OSF, PWF, RNF, TWF)
+    const failureModeChart = new Chart(document.getElementById("failureModeChart"), {
+      type: "bar",
+      data: {
+        labels: ["HDF (Heat)", "OSF (Overstrain)", "PWF (Power)", "RNF (Random)", "TWF (Tool Wear)"],
+        datasets: [{
+          label: "Failure Occurrences",
+          data: [0, 0, 0, 0, 0],
+          backgroundColor: ["#f87171", "#fb923c", "#f59e0b", "#38bdf8", "#a78bfa"],
+          borderRadius: 6,
+          barThickness: 36
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // 2. Failure Rate by Tool Wear Stage Line Chart
+    const wearRiskChart = new Chart(document.getElementById("wearRiskChart"), {
+      type: "line",
+      data: {
+        labels: ["0–60 min", "61–120 min", "121–180 min", "181+ min"],
+        datasets: [{
+          label: "Failure Rate (%)",
+          data: [0, 0, 0, 0],
+          borderColor: "#f59e0b",
+          backgroundColor: "rgba(245, 158, 11, 0.16)",
+          borderWidth: 2.5,
+          tension: 0.32,
+          fill: true,
+          pointRadius: 5,
+          pointBackgroundColor: "#f59e0b"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: v => v + "%" } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // 3. Product Type Volume Share Doughnut Chart
+    const typeShareChart = new Chart(document.getElementById("typeShareChart"), {
+      type: "doughnut",
+      data: {
+        labels: ["Type L (Low)", "Type M (Medium)", "Type H (High)"],
+        datasets: [{
+          data: [0, 0, 0],
+          backgroundColor: ["#38bdf8", "#34d399", "#f59e0b"],
+          borderColor: "#131926",
+          borderWidth: 2,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "66%",
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 12, padding: 14 } }
+        }
+      }
+    });
+
+    /**
+     * Recomputes KPIs, charts, and regime risk table whenever a filter changes.
+     * Wrapped in try/catch for runtime safety.
+     */
+    function updateDashboard() {
+      try {
+        const selType = document.getElementById("typeFilter").value;
+        const selWear = document.getElementById("wearFilter").value;
+        const selRpm = document.getElementById("rpmFilter").value;
+
+        const filtered = TATA_DATA.filter(r => {
+          const typeMatch = selType === "ALL" || r.t === selType;
+          const wearMatch = selWear === "ALL" || r.w === selWear;
+          const rpmMatch = selRpm === "ALL" || r.s === selRpm;
+          return typeMatch && wearMatch && rpmMatch;
+        });
+
+        const tbody = document.getElementById("regimeTableBody");
+        tbody.innerHTML = "";
+
+        if (filtered.length === 0) {
+          ["kpiRows", "kpiFailCount", "kpiFailRate", "kpiRpm", "kpiTorque", "kpiWear", "kpiProcTemp", "kpiAirTemp"]
+            .forEach(id => { document.getElementById(id).textContent = "—"; });
+          tbody.innerHTML = `<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:20px;">No telemetry records match this filter combination. Click Reset Filters.</td></tr>`;
+          failureModeChart.data.datasets[0].data = [0, 0, 0, 0, 0];
+          failureModeChart.update();
+          wearRiskChart.data.datasets[0].data = [0, 0, 0, 0];
+          wearRiskChart.update();
+          typeShareChart.data.datasets[0].data = [0, 0, 0];
+          typeShareChart.update();
+          return;
+        }
+
+        const totN = filtered.reduce((s, r) => s + r.n, 0);
+        const totAf = filtered.reduce((s, r) => s + r.af, 0);
+        const totA = filtered.reduce((s, r) => s + r.a, 0);
+        const totP = filtered.reduce((s, r) => s + r.p, 0);
+        const totR = filtered.reduce((s, r) => s + r.r, 0);
+        const totQ = filtered.reduce((s, r) => s + r.q, 0);
+        const totWr = filtered.reduce((s, r) => s + r.wr, 0);
+
+        const totHdf = filtered.reduce((s, r) => s + r.hdf, 0);
+        const totOsf = filtered.reduce((s, r) => s + r.osf, 0);
+        const totPwf = filtered.reduce((s, r) => s + r.pwf, 0);
+        const totRnf = filtered.reduce((s, r) => s + r.rnf, 0);
+        const totTwf = filtered.reduce((s, r) => s + r.twf, 0);
+
+        const failPct = totN > 0 ? (totAf / totN) * 100 : 0;
+
+        document.getElementById("kpiRows").textContent = totN.toLocaleString("en-US");
+        document.getElementById("kpiRowsSub").textContent =
+          selType === "ALL" ? "All product variants (L, M, H)" : `Filtered to Product Type ${selType}`;
+
+        document.getElementById("kpiFailCount").textContent = totAf.toLocaleString("en-US");
+        const failRateEl = document.getElementById("kpiFailRate");
+        failRateEl.className = "kpi-delta " + (failPct >= 3.0 ? "neg" : failPct >= 1.5 ? "warn" : "pos");
+        failRateEl.textContent = `Failure rate: ${failPct.toFixed(2)}%`;
+
+        document.getElementById("kpiRpm").textContent = `${Math.round(totR / totN).toLocaleString("en-US")} RPM`;
+        document.getElementById("kpiTorque").textContent = `Avg torque: ${(totQ / totN).toFixed(2)} Nm`;
+
+        document.getElementById("kpiWear").textContent = `${(totWr / totN).toFixed(2)} min`;
+
+        document.getElementById("kpiProcTemp").textContent = `${(totP / totN).toFixed(2)} K`;
+        document.getElementById("kpiAirTemp").textContent = `Avg air temp: ${(totA / totN).toFixed(2)} K`;
+
+        // Update Failure Mode Bar Chart
+        document.getElementById("modeSub").textContent =
+          selType === "ALL" ? "All Product Types (L, M, H)" : `Product Type ${selType}`;
+        failureModeChart.data.datasets[0].data = [totHdf, totOsf, totPwf, totRnf, totTwf];
+        failureModeChart.update();
+
+        // Update Wear Risk Line Chart across all 4 wear stages for active Type & RPM filter
+        const wearRates = WEAR_BINS.map(wb => {
+          const rows = TATA_DATA.filter(r =>
+            r.w === wb &&
+            (selType === "ALL" || r.t === selType) &&
+            (selRpm === "ALL" || r.s === selRpm)
+          );
+          const n = rows.reduce((s, r) => s + r.n, 0);
+          const af = rows.reduce((s, r) => s + r.af, 0);
+          return n > 0 ? Number(((af / n) * 100).toFixed(2)) : 0;
+        });
+        wearRiskChart.data.datasets[0].data = wearRates;
+        wearRiskChart.update();
+
+        // Update Type Share Doughnut for active Wear & RPM filter
+        const typeCounts = TYPES.map(tp => {
+          const rows = TATA_DATA.filter(r =>
+            r.t === tp &&
+            (selWear === "ALL" || r.w === selWear) &&
+            (selRpm === "ALL" || r.s === selRpm)
+          );
+          return rows.reduce((s, r) => s + r.n, 0);
+        });
+        typeShareChart.data.datasets[0].data = typeCounts;
+        typeShareChart.update();
+
+        // Populate Regime Risk Table grouped by (Product Type + Tool Wear Bucket)
+        const regMap = {};
+        filtered.forEach(r => {
+          const key = `${r.t} • ${r.w}`;
+          if (!regMap[key]) {
+            regMap[key] = { label: key, n: 0, af: 0, r: 0, q: 0 };
+          }
+          regMap[key].n += r.n;
+          regMap[key].af += r.af;
+          regMap[key].r += r.r;
+          regMap[key].q += r.q;
+        });
+
+        const regList = Object.values(regMap)
+          .sort((a, b) => (b.af / b.n) - (a.af / a.n))
+          .slice(0, 10);
+
+        regList.forEach(row => {
+          const rate = (row.af / row.n) * 100;
+          const pillClass = rate >= 4.0 ? "pill-bad" : rate >= 1.5 ? "pill-warn" : "pill-good";
+          const pillText = rate >= 4.0 ? "High Risk" : rate >= 1.5 ? "Moderate" : "Low Risk";
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><strong>${row.label}</strong></td>
+            <td>${row.n.toLocaleString("en-US")}</td>
+            <td>${row.af.toLocaleString("en-US")}</td>
+            <td>${rate.toFixed(2)}%</td>
+            <td>${Math.round(row.r / row.n).toLocaleString("en-US")} RPM</td>
+            <td>${(row.q / row.n).toFixed(1)} Nm</td>
+            <td><span class="status-pill ${pillClass}">${pillText}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Error updating TATA dashboard:", err);
+      }
+    }
+
+    // Attach filter and reset listeners
+    document.getElementById("typeFilter").addEventListener("change", updateDashboard);
+    document.getElementById("wearFilter").addEventListener("change", updateDashboard);
+    document.getElementById("rpmFilter").addEventListener("change", updateDashboard);
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("typeFilter").value = "ALL";
+      document.getElementById("wearFilter").value = "ALL";
+      document.getElementById("rpmFilter").value = "ALL";
+      updateDashboard();
+    });
+
+    // Initial render on load
+    updateDashboard();
+  </script>
+</body>
+</html>
